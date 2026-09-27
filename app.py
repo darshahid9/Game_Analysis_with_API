@@ -16,15 +16,6 @@ st.set_page_config(
 
 DB_PATH = Path(__file__).resolve().parent / "data" / "tennis_analytics.db"
 
-st.write("🔍 Checking database...")
-
-if not DB_PATH.exists():
-    st.error(f"❌ Database file NOT found: {DB_PATH}")
-    st.stop()
-
-st.success(
-    f"✅ Database found — {DB_PATH.stat().st_size / 1024:.1f} KB"
-)
 
 engine = get_engine()
 
