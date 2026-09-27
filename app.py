@@ -19,12 +19,34 @@ st.set_page_config(
 
 
 # ============================================================
+# GLOBAL VISUAL SETTINGS
+# ============================================================
+
+PRIMARY_BLUE = "#2563EB"
+TEAL = "#0F766E"
+GREEN = "#16A34A"
+RED = "#DC2626"
+ORANGE = "#F59E0B"
+PURPLE = "#7C3AED"
+
+CATEGORY_COLORS = [
+    "#2563EB",
+    "#16A34A",
+    "#F59E0B",
+    "#7C3AED",
+    "#DC2626",
+    "#0891B2",
+    "#EA580C",
+    "#4F46E5",
+]
+
+
+# ============================================================
 # DATABASE
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "data" / "tennis_analytics.db"
-
 
 if not DB_PATH.exists():
     st.error(
@@ -32,7 +54,6 @@ if not DB_PATH.exists():
         "`data/tennis_analytics.db` exists in the repository."
     )
     st.stop()
-
 
 engine = get_engine()
 
@@ -45,10 +66,6 @@ engine = get_engine()
 def load_table(query: str) -> pd.DataFrame:
     return pd.read_sql(query, engine)
 
-
-# ------------------------------------------------------------
-# Rankings
-# ------------------------------------------------------------
 
 rankings = load_table(
     """
@@ -72,10 +89,6 @@ rankings = load_table(
 )
 
 
-# ------------------------------------------------------------
-# Competitions
-# ------------------------------------------------------------
-
 competitions = load_table(
     """
     SELECT
@@ -90,10 +103,6 @@ competitions = load_table(
     """
 )
 
-
-# ------------------------------------------------------------
-# Venues
-# ------------------------------------------------------------
 
 venues = load_table(
     """
@@ -121,7 +130,6 @@ if rankings.empty:
     st.stop()
 
 
-# Make sure numeric columns are numeric
 numeric_columns = [
     "rank",
     "movement",
@@ -180,11 +188,6 @@ with st.expander("🔎 Database status", expanded=False):
 
 st.sidebar.header("🎛 Filters")
 
-
-# ------------------------------------------------------------
-# Year
-# ------------------------------------------------------------
-
 years = sorted(
     rankings["year"].dropna().unique(),
     reverse=True
@@ -195,10 +198,6 @@ year_sel = st.sidebar.selectbox(
     years
 )
 
-
-# ------------------------------------------------------------
-# Week
-# ------------------------------------------------------------
 
 weeks = sorted(
     rankings["week"].dropna().unique(),
@@ -211,10 +210,6 @@ week_sel = st.sidebar.selectbox(
 )
 
 
-# ------------------------------------------------------------
-# Gender
-# ------------------------------------------------------------
-
 gender_values = sorted(
     rankings["gender"].dropna().unique()
 )
@@ -225,13 +220,7 @@ gender_sel = st.sidebar.selectbox(
 )
 
 
-# ------------------------------------------------------------
-# Rank range
-# ------------------------------------------------------------
-
-max_rank = int(
-    rankings["rank"].max()
-)
+max_rank = int(rankings["rank"].max())
 
 rank_range = st.sidebar.slider(
     "Rank range",
@@ -240,10 +229,6 @@ rank_range = st.sidebar.slider(
     value=(1, min(50, max_rank))
 )
 
-
-# ------------------------------------------------------------
-# Search
-# ------------------------------------------------------------
 
 search = st.sidebar.text_input(
     "🔍 Search competitor",
@@ -280,32 +265,26 @@ if search:
     ]
 
 
-# Sort
-filtered = filtered.sort_values(
-    "rank"
-)
+filtered = filtered.sort_values("rank")
 
 
 # ============================================================
-# TOP SUMMARY
+# EXECUTIVE SUMMARY
 # ============================================================
 
 st.subheader("📊 Executive Summary")
 
 c1, c2, c3, c4 = st.columns(4)
 
-
 c1.metric(
     "Competitors",
     f"{filtered['competitor_id'].nunique():,}"
 )
 
-
 c2.metric(
     "Countries",
     f"{filtered['country'].nunique():,}"
 )
-
 
 c3.metric(
     "Highest points",
@@ -314,12 +293,10 @@ c3.metric(
     else "0"
 )
 
-
 c4.metric(
     "Competitions",
     f"{competitions['competition_id'].nunique():,}"
 )
-
 
 st.divider()
 
@@ -346,7 +323,7 @@ st.divider()
 
 
 # ============================================================
-# TAB 1 — RANKINGS & LEADERBOARD
+# TAB 1 — RANKINGS
 # ============================================================
 
 with tab_rankings:
@@ -362,7 +339,7 @@ with tab_rankings:
     else:
 
         # ----------------------------------------------------
-        # Ranking table
+        # Leaderboard
         # ----------------------------------------------------
 
         st.markdown("### Filtered leaderboard")
@@ -386,14 +363,17 @@ with tab_rankings:
 
 
         # ----------------------------------------------------
-        # Top 10 points
+        # TOP 10 BY POINTS
         # ----------------------------------------------------
 
         st.markdown("### 📈 Top competitors by points")
 
         top10 = (
             filtered
-            .sort_values("points", ascending=False)
+            .sort_values(
+                "points",
+                ascending=False
+            )
             .head(10)
             .sort_values("points")
         )
@@ -414,10 +394,14 @@ with tab_rankings:
                 "movement",
                 "competitions_played",
             ],
+            color="points",
+            color_continuous_scale="Blues",
         )
 
         fig_top10.update_layout(
-            height=500
+            height=500,
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -427,15 +411,13 @@ with tab_rankings:
 
 
         # ----------------------------------------------------
-        # Rank vs Points
+        # RANK VS POINTS
         # ----------------------------------------------------
 
         st.markdown("### 🔎 Rank vs points")
 
-        scatter_data = filtered.copy()
-
         fig_scatter = px.scatter(
-            scatter_data,
+            filtered,
             x="rank",
             y="points",
             hover_name="name",
@@ -449,10 +431,17 @@ with tab_rankings:
                 "rank": "Ranking position",
                 "points": "Ranking points",
             },
+            color="points",
+            color_continuous_scale="Viridis",
         )
 
         fig_scatter.update_xaxes(
             autorange="reversed"
+        )
+
+        fig_scatter.update_layout(
+            plot_bgcolor="white",
+            coloraxis_colorbar_title="Points",
         )
 
         st.plotly_chart(
@@ -462,7 +451,7 @@ with tab_rankings:
 
 
         # ----------------------------------------------------
-        # Movement analysis
+        # MOVEMENT
         # ----------------------------------------------------
 
         st.markdown("### 🚀 Ranking movement")
@@ -478,7 +467,11 @@ with tab_rankings:
             y="name",
             orientation="h",
             color="movement",
-            color_continuous_scale="RdYlGn",
+            color_continuous_scale=[
+                [0.0, "#DC2626"],
+                [0.5, "#FACC15"],
+                [1.0, "#16A34A"],
+            ],
             title="Ranking movement by competitor",
             labels={
                 "movement": "Movement",
@@ -486,13 +479,27 @@ with tab_rankings:
             },
         )
 
+        fig_movement.add_vline(
+            x=0,
+            line_width=1,
+            line_dash="dash",
+            line_color="#6B7280",
+        )
+
         fig_movement.update_layout(
-            height=600
+            height=600,
+            coloraxis_colorbar_title="Movement",
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
             fig_movement,
             use_container_width=True
+        )
+
+        st.caption(
+            "Movement is displayed using a diverging scale so that "
+            "directional changes are easier to identify."
         )
 
 
@@ -517,7 +524,6 @@ with tab_competitor:
         .sort_values("name")
     )
 
-
     if competitor_pool.empty:
 
         st.warning(
@@ -531,7 +537,6 @@ with tab_competitor:
             competitor_pool["name"].tolist()
         )
 
-
         selected = snapshot[
             snapshot["name"] == selected_name
         ].sort_values(
@@ -539,15 +544,9 @@ with tab_competitor:
             ascending=False
         )
 
-
         if not selected.empty:
 
             latest = selected.iloc[0]
-
-
-            # ------------------------------------------------
-            # Profile metrics
-            # ------------------------------------------------
 
             st.markdown(
                 f"### {latest['name']}"
@@ -558,9 +557,7 @@ with tab_competitor:
                 f"({latest['country_code']})"
             )
 
-
             cc1, cc2, cc3, cc4 = st.columns(4)
-
 
             cc1.metric(
                 "Rank",
@@ -582,12 +579,10 @@ with tab_competitor:
                 int(latest["competitions_played"])
             )
 
-
             st.divider()
 
-
             # ------------------------------------------------
-            # Competitor profile chart
+            # PERFORMANCE PROFILE
             # ------------------------------------------------
 
             st.markdown(
@@ -597,8 +592,8 @@ with tab_competitor:
             profile = pd.DataFrame(
                 {
                     "Metric": [
-                        "Points",
-                        "Competitions Played",
+                        "Ranking points",
+                        "Competitions played",
                     ],
                     "Value": [
                         int(latest["points"]),
@@ -607,17 +602,26 @@ with tab_competitor:
                 }
             )
 
-
             fig_profile = px.bar(
                 profile,
                 x="Metric",
                 y="Value",
                 title="Current performance indicators",
                 text="Value",
+                color="Metric",
+                color_discrete_sequence=[
+                    PRIMARY_BLUE,
+                    TEAL,
+                ],
             )
 
             fig_profile.update_traces(
                 textposition="outside"
+            )
+
+            fig_profile.update_layout(
+                showlegend=False,
+                plot_bgcolor="white",
             )
 
             st.plotly_chart(
@@ -625,6 +629,46 @@ with tab_competitor:
                 use_container_width=True
             )
 
+            # ------------------------------------------------
+            # RANKING POSITION GAUGE-LIKE VIEW
+            # ------------------------------------------------
+
+            st.markdown(
+                "### 🎯 Ranking position"
+            )
+
+            rank_position = pd.DataFrame(
+                {
+                    "Metric": ["Current Rank"],
+                    "Rank": [int(latest["rank"])],
+                }
+            )
+
+            fig_rank = px.bar(
+                rank_position,
+                x="Metric",
+                y="Rank",
+                text="Rank",
+                title="Current ranking position",
+            )
+
+            fig_rank.update_traces(
+                marker_color=PURPLE,
+                textposition="outside",
+            )
+
+            fig_rank.update_yaxes(
+                autorange="reversed"
+            )
+
+            fig_rank.update_layout(
+                plot_bgcolor="white",
+            )
+
+            st.plotly_chart(
+                fig_rank,
+                use_container_width=True
+            )
 
             st.info(
                 f"Current snapshot: {int(latest['year'])}, "
@@ -675,10 +719,6 @@ with tab_country:
         )
 
 
-        # ----------------------------------------------------
-        # Country KPIs
-        # ----------------------------------------------------
-
         cc1, cc2, cc3 = st.columns(3)
 
         cc1.metric(
@@ -696,15 +736,14 @@ with tab_country:
 
         cc3.metric(
             "Highest average points",
-            country_stats["avg_points"].max()
+            f"{country_stats['avg_points'].max():,.0f}"
         )
-
 
         st.divider()
 
 
         # ----------------------------------------------------
-        # Competitors by country
+        # COUNTRY COMPETITOR DISTRIBUTION
         # ----------------------------------------------------
 
         st.markdown(
@@ -721,7 +760,6 @@ with tab_country:
             .sort_values("competitors")
         )
 
-
         fig_country_count = px.bar(
             top_countries,
             x="competitors",
@@ -733,10 +771,17 @@ with tab_country:
                 "country": "",
             },
             text="competitors",
+            color="competitors",
+            color_continuous_scale="Blues",
         )
 
         fig_country_count.update_traces(
             textposition="outside"
+        )
+
+        fig_country_count.update_layout(
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -746,7 +791,7 @@ with tab_country:
 
 
         # ----------------------------------------------------
-        # Average points by country
+        # AVERAGE POINTS
         # ----------------------------------------------------
 
         st.markdown(
@@ -763,7 +808,6 @@ with tab_country:
             .sort_values("avg_points")
         )
 
-
         fig_avg = px.bar(
             top_avg,
             x="avg_points",
@@ -775,11 +819,18 @@ with tab_country:
                 "country": "",
             },
             text="avg_points",
+            color="avg_points",
+            color_continuous_scale="Teal",
         )
 
         fig_avg.update_traces(
             texttemplate="%{text:.0f}",
             textposition="outside"
+        )
+
+        fig_avg.update_layout(
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -789,7 +840,47 @@ with tab_country:
 
 
         # ----------------------------------------------------
-        # Country data table
+        # COUNTRY PERFORMANCE SCATTER
+        # ----------------------------------------------------
+
+        st.markdown(
+            "### 📌 Country depth vs performance"
+        )
+
+        fig_country_scatter = px.scatter(
+            country_stats,
+            x="competitors",
+            y="avg_points",
+            size="total_points",
+            hover_name="country",
+            hover_data=[
+                "best_rank",
+                "total_points",
+            ],
+            title=(
+                "Number of competitors vs average ranking points"
+            ),
+            labels={
+                "competitors": "Number of competitors",
+                "avg_points": "Average points",
+                "total_points": "Total points",
+            },
+            color="avg_points",
+            color_continuous_scale="Viridis",
+        )
+
+        fig_country_scatter.update_layout(
+            plot_bgcolor="white",
+        )
+
+        st.plotly_chart(
+            fig_country_scatter,
+            use_container_width=True
+        )
+
+
+        # ----------------------------------------------------
+        # TABLE
         # ----------------------------------------------------
 
         st.markdown(
@@ -831,10 +922,6 @@ with tab_venues:
 
     else:
 
-        # ----------------------------------------------------
-        # Venue KPIs
-        # ----------------------------------------------------
-
         vc1, vc2, vc3 = st.columns(3)
 
         vc1.metric(
@@ -852,12 +939,11 @@ with tab_venues:
             f"{venues['complex_name'].nunique():,}"
         )
 
-
         st.divider()
 
 
         # ----------------------------------------------------
-        # Venues by country
+        # VENUES BY COUNTRY
         # ----------------------------------------------------
 
         venue_country = (
@@ -878,11 +964,9 @@ with tab_venues:
             .sort_values("venues")
         )
 
-
         st.markdown(
             "### 🌍 Venue distribution"
         )
-
 
         fig_venue_country = px.bar(
             venue_country,
@@ -895,10 +979,17 @@ with tab_venues:
                 "country_name": "",
             },
             text="venues",
+            color="venues",
+            color_continuous_scale="Blues",
         )
 
         fig_venue_country.update_traces(
             textposition="outside"
+        )
+
+        fig_venue_country.update_layout(
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -908,7 +999,7 @@ with tab_venues:
 
 
         # ----------------------------------------------------
-        # Largest complexes
+        # LARGEST COMPLEXES
         # ----------------------------------------------------
 
         complex_stats = (
@@ -933,11 +1024,9 @@ with tab_venues:
             .sort_values("venues")
         )
 
-
         st.markdown(
             "### 🏢 Largest tennis complexes"
         )
-
 
         fig_complex = px.bar(
             complex_stats,
@@ -950,10 +1039,17 @@ with tab_venues:
                 "complex_name": "",
             },
             text="venues",
+            color="venues",
+            color_continuous_scale="Teal",
         )
 
         fig_complex.update_traces(
             textposition="outside"
+        )
+
+        fig_complex.update_layout(
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -963,7 +1059,7 @@ with tab_venues:
 
 
         # ----------------------------------------------------
-        # Venue table
+        # VENUE DIRECTORY
         # ----------------------------------------------------
 
         st.markdown(
@@ -1001,10 +1097,6 @@ with tab_competitions:
 
     else:
 
-        # ----------------------------------------------------
-        # Competition KPIs
-        # ----------------------------------------------------
-
         kc1, kc2, kc3, kc4 = st.columns(4)
 
         kc1.metric(
@@ -1027,12 +1119,11 @@ with tab_competitions:
             f"{competitions['gender'].nunique():,}"
         )
 
-
         st.divider()
 
 
         # ----------------------------------------------------
-        # Competition categories
+        # CATEGORIES
         # ----------------------------------------------------
 
         category_stats = (
@@ -1050,11 +1141,9 @@ with tab_competitions:
             .sort_values("competitions")
         )
 
-
         st.markdown(
             "### 🏆 Competition categories"
         )
-
 
         fig_categories = px.bar(
             category_stats,
@@ -1067,10 +1156,17 @@ with tab_competitions:
                 "category_name": "",
             },
             text="competitions",
+            color="competitions",
+            color_continuous_scale="Purples",
         )
 
         fig_categories.update_traces(
             textposition="outside"
+        )
+
+        fig_categories.update_layout(
+            coloraxis_showscale=False,
+            plot_bgcolor="white",
         )
 
         st.plotly_chart(
@@ -1080,7 +1176,7 @@ with tab_competitions:
 
 
         # ----------------------------------------------------
-        # Competition type
+        # COMPETITION TYPE
         # ----------------------------------------------------
 
         type_stats = (
@@ -1096,11 +1192,9 @@ with tab_competitions:
             )
         )
 
-
         st.markdown(
             "### 📋 Competition type distribution"
         )
-
 
         fig_types = px.pie(
             type_stats,
@@ -1108,6 +1202,12 @@ with tab_competitions:
             values="competitions",
             title="Competition mix by type",
             hole=0.45,
+            color_discrete_sequence=CATEGORY_COLORS,
+        )
+
+        fig_types.update_traces(
+            textposition="inside",
+            textinfo="percent+label",
         )
 
         st.plotly_chart(
@@ -1117,7 +1217,7 @@ with tab_competitions:
 
 
         # ----------------------------------------------------
-        # Competition gender
+        # COMPETITION GENDER
         # ----------------------------------------------------
 
         gender_stats = (
@@ -1133,11 +1233,9 @@ with tab_competitions:
             )
         )
 
-
         st.markdown(
             "### ⚥ Competition gender distribution"
         )
-
 
         fig_gender = px.bar(
             gender_stats,
@@ -1149,10 +1247,22 @@ with tab_competitions:
                 "competitions": "Competitions",
             },
             text="competitions",
+            color="gender",
+            color_discrete_sequence=[
+                PRIMARY_BLUE,
+                PURPLE,
+                TEAL,
+                ORANGE,
+            ],
         )
 
         fig_gender.update_traces(
             textposition="outside"
+        )
+
+        fig_gender.update_layout(
+            plot_bgcolor="white",
+            showlegend=False,
         )
 
         st.plotly_chart(
@@ -1162,7 +1272,7 @@ with tab_competitions:
 
 
         # ----------------------------------------------------
-        # Competition table
+        # COMPETITION DIRECTORY
         # ----------------------------------------------------
 
         st.markdown(
