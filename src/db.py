@@ -23,4 +23,4 @@ def run_schema(engine: Engine, schema_path: str = "sql/schema.sql") -> None:
     The Streamlit application uses the already-created SQLite database,
     so no schema creation is required when the app starts.
     """
-    pass
+    
