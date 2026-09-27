@@ -16,10 +16,7 @@ def get_engine() -> Engine:
     )
 
 
-def run_schema(
-    engine: Engine,
-    schema_path: str = "sql/schema.sql"
-) -> None:
+def run_schema(engine: Engine, schema_path: str = "sql/schema.sql") -> None:
     """
     Kept for compatibility with the existing loader.
 
